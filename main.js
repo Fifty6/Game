@@ -1,23 +1,9 @@
-<!doctype html> 
-<html lang="en"> 
-<head> 
-	<meta charset="UTF-8" />
-	<title>Phaser - Making your first game, part 1</title>
-    <script src="phaser.js"></script>
-    <style type="text/css">
-        body {
-            margin: 0;
-        }
-    </style>
-</head>
-<body>
-
-<script type="text/javascript">
-
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '');
 var grounds, platforms, clouds, bullets, player, cursors, stars, scoreText, middleGround;
 var score = 0;
+var speed = 170;
 var lastTime = Date.now();
+var isJumping = false;
 
 var play = function () {};
 
@@ -26,7 +12,8 @@ play.prototype = {
         game.load.image('sky', 'assets/sky.png');
         game.load.image('ground', 'assets/platform.png');
         game.load.image('star', 'assets/star.png');
-        game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+        game.load.spritesheet('dude', 'assets/running.png', 180.80, 278);
+        game.load.spritesheet('dudeslide', 'assets/sliding.png', 240, 160)
         game.load.image('background', 'assets/clouds-h.png');
         game.load.image('bullet', 'assets/bullet.png');
         game.load.image('trees', 'assets/trees-h.png');
@@ -58,12 +45,13 @@ play.prototype = {
 
         var cloud = new MovingCloudPlatform(game, 400, 500, 'cloud-platform', clouds);
 
-        player = game.add.sprite(32, game.world.height - 150, 'dude');
+        player = game.add.sprite(32, 150, 'dude');
+        player.scale.setTo(0.30, 0.30);
         game.physics.arcade.enable(player);
         player.body.bounce.y = 0.2;
-        player.body.gravity.y = 300;
-        player.animations.add('left', [0, 1, 2, 3], 10, true);
-        player.animations.add('right', [5, 6, 7, 8], 10, true);
+        player.body.gravity.y = 1000;
+        player.animations.add('right', [1, 2, 3, 4], 10, true);
+        player.animations.add('jump', [5], 10, true);
 
         cursors = game.input.keyboard.createCursorKeys();
 
@@ -94,22 +82,40 @@ play.prototype = {
         // game.physics.arcade.overlap(player, stars, collectStar, null, this);
 
         //  Reset the players velocity (movement)
-        player.body.velocity.x = 0;
-        player.animations.play('right');
-        if (cursors.left.isDown) {
-            player.body.velocity.x = -250;
-        } else if (cursors.right.isDown) {
-            player.body.velocity.x = 250;
+        player.body.velocity.x = speed;
+        if (!isJumping) {
+            player.animations.play('right');   
         }
         
+        // if (cursors.left.isDown) {
+        //     player.body.velocity.x = -250;
+        // } else if (cursors.right.isDown) {
+        //     player.body.velocity.x = 250;
+        // }
+        
         //  Allow the player to jump if they are touching the ground.
-        if (cursors.up.isDown && player.body.touching.down) {
-            player.body.velocity.y = -350;
+        if (isJumping && !player.body.touching.down) {
+            player.body.velocity.x = 0;
         }
 
-        if (player.x + 32 < 0 || player.y > 600) {
-            game.state.start("Play");
+        if (isJumping && player.body.touching.down) {
+            isJumping = false;
         }
+
+        if (cursors.up.isDown && player.body.touching.down) {
+            player.body.velocity.x = 0;
+            player.body.velocity.y = -500;   
+            player.animations.play('jump');
+            isJumping = true;
+        }
+
+        if (cursors.down.isDown && player.body.touching.down) {
+
+        }
+
+        // if (player.x + 32 < 0 || player.y > 600) {
+        //     game.state.start("Play");
+        // }
 
         if (platforms.length < 3) {
             var platform = new MovingStationaryObject(game, game.world.width + 10, Math.random() * (game.world.height - 70), 'ground', platforms);
@@ -120,7 +126,7 @@ play.prototype = {
             ground.scale.setTo(2, 2);
         }
 
-        if (bullets.length < 2) {
+        if (bullets.length < 1) {
             var ground = new EnemyBullet(game, game.world.width + 10, Math.random() * (game.world.height - 70), 'bullet', bullets);
             ground.scale.setTo(0.5, 0.5);
         }
@@ -134,54 +140,12 @@ play.prototype = {
 game.state.add("Play", play);
 game.state.start("Play");
 
-var speed = 170;
-MovingStationaryObject = function(game, x, y, key, group) {
-    if (typeof group === 'undefined') { group = game.world; }
-    Phaser.Sprite.call(this, game, x, y, key);
-    game.physics.arcade.enable(this);
-    this.body.immovable = true;
-    group.add(this);
-};
-MovingStationaryObject.prototype = Object.create(Phaser.Sprite.prototype);
-MovingStationaryObject.prototype.constructor = MovingStationaryObject;
-MovingStationaryObject.prototype.customUpdate = function() {
-    // override this to do more cool shit....
-};
-MovingStationaryObject.prototype.update = function() {
-    this.body.velocity.x = -speed;
-    this.customUpdate();
-    if (this.x < -this.width) {
-        this.destroy();
-    }
-};
 
-EnemyBullet = function(game, x, y, key, group) {
-    MovingStationaryObject.call(this, game, x, y, key, group);
-};
-EnemyBullet.prototype = Object.create(MovingStationaryObject.prototype);
-EnemyBullet.prototype.constructor = EnemyBullet;
-EnemyBullet.prototype.customUpdate = function() {
-    this.body.velocity.x = -3*speed;
-};
 
-MovingCloudPlatform = function(game, x, y, key, group) {
-    MovingStationaryObject.call(this, game, x, y, key, group);
-    this.frameCounter = 0;
-};
-MovingCloudPlatform.prototype = Object.create(MovingStationaryObject.prototype);
-MovingCloudPlatform.prototype.constructor = MovingCloudPlatform;
-MovingCloudPlatform.prototype.customUpdate = function() {
-    if (this.frameCounter < 120) {
-        this.body.velocity.y = -100;
-    } else {
-        this.body.velocity.y = 100;
-    }
 
-    if (this.frameCounter == 240) {
-        this.frameCounter = 0;
-    }
-    this.frameCounter += 1;
-};
+
+
+
 
 function updateScore() {
     if (Date.now() - 1000 > lastTime) {
@@ -190,6 +154,3 @@ function updateScore() {
         lastTime = Date.now();
     }
 }
-</script>
-</body>
-</html>
