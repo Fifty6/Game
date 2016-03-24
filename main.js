@@ -3,7 +3,6 @@ var grounds, platforms, clouds, bullets, player, cursors, stars, scoreText, midd
 var score = 0;
 var speed = 170;
 var lastTime = Date.now();
-var isJumping = false;
 
 var play = function () {};
 
@@ -13,7 +12,9 @@ play.prototype = {
         game.load.image('ground', 'assets/platform.png');
         game.load.image('star', 'assets/star.png');
         game.load.spritesheet('dude', 'assets/running.png', 180.80, 278);
-        game.load.spritesheet('dudeslide', 'assets/sliding.png', 240, 160)
+        // game.load.spritesheet('dudeslide', 'assets/sliding.png', 240, 160);
+        game.load.atlasJSONHash('harrison', 'assets/run.png', 'assets/run.json');
+        game.load.image('dudeSlide', 'assets/sliding.png');
         game.load.image('background', 'assets/clouds-h.png');
         game.load.image('bullet', 'assets/bullet.png');
         game.load.image('trees', 'assets/trees-h.png');
@@ -45,13 +46,22 @@ play.prototype = {
 
         var cloud = new MovingCloudPlatform(game, 400, 500, 'cloud-platform', clouds);
 
-        player = game.add.sprite(32, 150, 'dude');
+        player = game.add.sprite(32, 150, 'harrison');
         player.scale.setTo(0.30, 0.30);
         game.physics.arcade.enable(player);
         player.body.bounce.y = 0.2;
-        player.body.gravity.y = 1000;
-        player.animations.add('right', [1, 2, 3, 4], 10, true);
-        player.animations.add('jump', [5], 10, true);
+        player.body.gravity.y = 800;
+        // player.animations.add('right', [1, 2, 3, 4], 10, true);
+        // player.animations.add('jump', [5], 10, true);
+        player.animations.add('run', [0, 1, 2, 3, 4, ,5]);
+        player.animations.add('slide', [6]);
+        player.animations.play('run', 10, true);
+
+        // var playerSlideImg = game.cache.getImage('dudeSlide');
+        // player.slideDimensions = {width: playerSlideImg.width, height: playerSlideImg.height};
+        // player.standDimensions = {width: player.width, height: player.height};
+        // player.anchor.setTo(0.5, 1);
+
 
         cursors = game.input.keyboard.createCursorKeys();
 
@@ -68,6 +78,7 @@ play.prototype = {
         // }
     },
     update: function() {
+        game.debug.spriteInfo(player, 20, 32);
         updateScore();
 
         game.background.tilePosition.x -= 1;
@@ -82,40 +93,33 @@ play.prototype = {
         // game.physics.arcade.overlap(player, stars, collectStar, null, this);
 
         //  Reset the players velocity (movement)
-        player.body.velocity.x = speed;
-        if (!isJumping) {
-            player.animations.play('right');   
-        }
+        player.body.velocity.x = 0;
+        player.animations.play('run');
         
-        // if (cursors.left.isDown) {
-        //     player.body.velocity.x = -250;
-        // } else if (cursors.right.isDown) {
-        //     player.body.velocity.x = 250;
-        // }
-        
-        //  Allow the player to jump if they are touching the ground.
-        if (isJumping && !player.body.touching.down) {
-            player.body.velocity.x = 0;
-        }
-
-        if (isJumping && player.body.touching.down) {
-            isJumping = false;
+        if (cursors.left.isDown) {
+            player.body.velocity.x = -250;
+        } else if (cursors.right.isDown) {
+            player.body.velocity.x = 250;
         }
 
         if (cursors.up.isDown && player.body.touching.down) {
-            player.body.velocity.x = 0;
             player.body.velocity.y = -500;   
             player.animations.play('jump');
-            isJumping = true;
         }
 
         if (cursors.down.isDown && player.body.touching.down) {
-
-        }
-
-        // if (player.x + 32 < 0 || player.y > 600) {
-        //     game.state.start("Play");
+            player.animations.play('slide');
+        } 
+        // else if (player.sliding) {
+        //     player.sliding = false;
+        //     player.loadTexture('dude');
+        //     // player.animations.play('right');
+        //     player.body.setSize(player.standDimensions.width, player.standDimensions.height);
         // }
+
+        if (player.x + 32 < 0 || player.y > 600) {
+            game.state.start("Play");
+        }
 
         if (platforms.length < 3) {
             var platform = new MovingStationaryObject(game, game.world.width + 10, Math.random() * (game.world.height - 70), 'ground', platforms);
@@ -131,9 +135,9 @@ play.prototype = {
             ground.scale.setTo(0.5, 0.5);
         }
 
-        if (clouds.length < 2) {
-            var cloud = new MovingCloudPlatform(game, game.world.width + 10, Math.random() * (game.world.height - 70), 'cloud-platform', clouds);
-        }
+        // if (clouds.length < 2) {
+        //     var cloud = new MovingCloudPlatform(game, game.world.width + 10, Math.random() * (game.world.height - 70), 'cloud-platform', clouds);
+        // }
     }
 }
 
